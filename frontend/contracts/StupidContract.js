@@ -41,7 +41,7 @@ export const ABI= [
         "type": "uint256"
       },
       {
-        "indexed": false,
+        "indexed": true,
         "internalType": "address",
         "name": "sender",
         "type": "address"
@@ -140,5 +140,5 @@ export const ABI= [
     "type": "function"
   }
 ]
-export const address= "0x2538a10b7fFb1B78c890c870FC152b10be121f04"
+export const address= "0x873296D762557d3f1d4Cd1436344715712d7C213"
 export const contract=new ethers.Contract(address, ABI)

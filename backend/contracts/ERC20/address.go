@@ -1,0 +1,3 @@
+package ERC20
+
+var Address = "0xc3761EB917CD790B30dAD99f6Cc5b4Ff93C4F9eA"

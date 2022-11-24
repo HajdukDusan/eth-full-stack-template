@@ -8,6 +8,7 @@ async function main() {
 
     // deploy and export contract
     await deployAndExport("StupidContract", 1000, "This is the stupid contract description");
+
 }
 
 main()

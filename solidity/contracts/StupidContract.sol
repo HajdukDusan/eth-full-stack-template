@@ -17,7 +17,7 @@ contract StupidContract {
         string message;
     }
 
-    event StupidEvent(uint256 index, address sender, uint256 timestamp);
+    event StupidEvent(uint256 index, address indexed sender, uint256 timestamp);
 
     modifier CheckFee(uint256 _value) {
         if (_value < MessageEntryFee) revert StupidContract__FeeNotEnough();
