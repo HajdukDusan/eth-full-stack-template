@@ -10,6 +10,13 @@ const exportContract = (contractName, address) => {
 };
 
 const exportForFront = (contractName, address) => {
+
+    runShellCmd(
+        "cd .. &" +
+        "cd ./frontend &" +
+        "mkdir contracts"
+    )
+
     try {
         const dir = path.resolve(
             __dirname,
@@ -25,7 +32,7 @@ const exportForFront = (contractName, address) => {
 
         const dirWrite = path.resolve(
             __dirname,
-            "../../frontend/src/contracts/" + contractName + ".js"
+            "../../frontend/contracts/" + contractName + ".js"
         );
 
         fs.writeFileSync(dirWrite, "import { ethers } from \"ethers\"; \nexport const ABI= " + JSON.stringify(abi, null, 2) + "\nexport const address= \"" + address + "\"\nexport const contract=new ethers.Contract(address, ABI)", (err) => {
@@ -55,8 +62,8 @@ const exportForBackend = (contractName, contractAddress) => {
         "solcjs --optimize --abi ./solidity/contracts/" + contractName + ".sol -o ./backend/contracts/" + contractName + "/abi &" +
         "solcjs --optimize --bin ./solidity/contracts/" + contractName + ".sol -o ./backend/contracts/" + contractName + "/bin &" +
         "abigen " +
-        "--abi=./backend/contracts/" + contractName + "/abi/solidity_contracts_PaymentContract_sol_" + contractName + ".abi " +
-        "--bin=./backend/contracts/" + contractName + "/bin/solidity_contracts_PaymentContract_sol_" + contractName + ".bin " +
+        "--abi=./backend/contracts/" + contractName + "/abi/solidity_contracts_" + contractName + "_sol_" + contractName + ".abi " +
+        "--bin=./backend/contracts/" + contractName + "/bin/solidity_contracts_" + contractName + "_sol_" + contractName + ".bin " +
         "--pkg=" + contractName + " --out=./backend/contracts/" + contractName + "/api.go"
     )
 

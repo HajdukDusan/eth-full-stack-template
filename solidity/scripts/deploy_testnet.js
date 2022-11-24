@@ -6,10 +6,10 @@ const { deployAndExport } = require("../utils/deploy");
 async function main() {
 
     // deploy and export contract
-    const address = await deployAndExport("PaymentContract", "0x14dC79964da2C08b23698B3D3cc7Ca32193d9955")
+    const address = await deployAndExport("StupidContract", 1000, "This is the stupid contract description");
 
     // verify contract on etherscan
-    await verify(address, ["0x14dC79964da2C08b23698B3D3cc7Ca32193d9955"])
+    await verify(address, [1000, "This is the stupid contract description"])
 }
 
 main()
