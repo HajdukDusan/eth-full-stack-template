@@ -12,7 +12,10 @@ require (
 	github.com/joho/godotenv v1.4.0 // indirect
 	github.com/labstack/echo v3.3.10+incompatible
 	github.com/labstack/echo/v4 v4.9.0
+	github.com/rivo/uniseg v0.4.3 // indirect
+	github.com/schollz/progressbar/v3 v3.12.1 // indirect
 	golang.org/x/net v0.0.0-20220607020251-c690dde0001d // indirect
+	golang.org/x/term v0.2.0 // indirect
 	gopkg.in/olebedev/go-duktape.v3 v3.0.0-20200619000410-60c24ae608a6 // indirect
 	gopkg.in/urfave/cli.v1 v1.20.0 // indirect
 	gotest.tools v2.2.0+incompatible // indirect

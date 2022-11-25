@@ -17,6 +17,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/joho/godotenv"
+	"github.com/schollz/progressbar/v3"
 )
 
 func main() {
@@ -34,23 +35,29 @@ func main() {
 		panic(err)
 	}
 
-	erc20, err := ERC20.NewERC20(
+	erc20API, err := ERC20.NewERC20(
 		common.HexToAddress(ERC20.Address),
 		mainnetClient,
 	)
 
 	events, err := GetEvents(
 		mainnetClient,
-		erc20,
-		big.NewInt(6383820),
-		big.NewInt(6383840),
-		[]string{"Transfer(address,address,uint256)", "Approval(address,address,uint256)"},
-		[]func(types.Log) (interface{}, error){
-			func(log types.Log) (interface{}, error) {
-				return erc20.ParseTransfer(log)
+		nil,
+		nil,
+		[]EventWrapper{
+			{
+				"Transfer",
+				[]string{"address", "address", "uint256"},
+				func(log types.Log) (interface{}, error) {
+					return erc20API.ParseTransfer(log)
+				},
 			},
-			func(log types.Log) (interface{}, error) {
-				return erc20.ParseApproval(log)
+			{
+				"Approval",
+				[]string{"address", "address", "uint256"},
+				func(log types.Log) (interface{}, error) {
+					return erc20API.ParseApproval(log)
+				},
 			},
 		},
 	)
@@ -58,52 +65,51 @@ func main() {
 		log.Fatal(err)
 	}
 
-	for _, event := range events {
+	fmt.Println(len(events))
 
-		// fmt.Println(reflect.TypeOf(event))
+	// for _, event := range events {
 
-		// transferEvent, ok := event.(*ERC20.ERC20Transfer)
-		// if ok {
-		// 	fmt.Println("Transfer")
-		// 	fmt.Println("From:", transferEvent.From)
-		// 	fmt.Println("To:", transferEvent.To)
-		// 	fmt.Println("Tokens", transferEvent.Tokens)
-		// }
-
-		switch obj := event.(type) {
-		case *ERC20.ERC20Transfer:
-			fmt.Println("Transfer")
-			fmt.Println("From:", obj.From)
-			fmt.Println("To:", obj.To)
-			fmt.Println("Tokens", obj.Tokens)
-		case *ERC20.ERC20Approval:
-			fmt.Println("Approve")
-			fmt.Println("Spender:", obj.Spender)
-			fmt.Println("TokenOwner:", obj.TokenOwner)
-			fmt.Println("Tokens", obj.Tokens)
-		default:
-			fmt.Printf("Strange Object")
-		}
-	}
-
-	// fmt.Println(len(events))
+	// 	switch obj := event.(type) {
+	// 	case *ERC20.ERC20Transfer:
+	// 		fmt.Println("Transfer")
+	// 		fmt.Println("From:", obj.From)
+	// 		fmt.Println("To:", obj.To)
+	// 		fmt.Println("Tokens", obj.Tokens)
+	// 	case *ERC20.ERC20Approval:
+	// 		fmt.Println("Approve")
+	// 		fmt.Println("Spender:", obj.Spender)
+	// 		fmt.Println("TokenOwner:", obj.TokenOwner)
+	// 		fmt.Println("Tokens", obj.Tokens)
+	// 	default:
+	// 		fmt.Printf("Strange Object")
+	// 	}
+	// }
 }
 
-func GetEvents(client *ethclient.Client, erc20Contract *ERC20.ERC20, startBlock *big.Int, endBlock *big.Int, eventSignatures []string, parseEvent []func(types.Log) (interface{}, error)) ([]interface{}, error) {
+type EventWrapper struct {
+	Name        string
+	Args        []string
+	ParseMethod func(types.Log) (interface{}, error)
+}
 
-	hashedEventSigs := make([]common.Hash, len(eventSignatures))
+func GetEvents(client *ethclient.Client, startBlock *big.Int, endBlock *big.Int, events []EventWrapper) ([]interface{}, error) {
 
-	for indx := range eventSignatures {
-		hashedEventSigs[indx] = crypto.Keccak256Hash([]byte(eventSignatures[indx]))
-	}
+	eventSigs := generateSignatures(events)
 
 	var fromBlock *big.Int = setBigInt(startBlock)
 	var toBlock *big.Int = setBigInt(endBlock)
 
 	result := make([]interface{}, 0)
 
+	stats := make([]int64, len(eventSigs))
+
+	bar, err := setupProgressBar(client, fromBlock, toBlock)
+	if err != nil {
+		return nil, err
+	}
+
 	for {
-		logs, newFromBlock, newToBlock, err := fetchEvents(client, fromBlock, toBlock, hashedEventSigs)
+		logs, newFromBlock, newToBlock, err := fetchEvents(client, fromBlock, toBlock, eventSigs)
 		if err != nil {
 			return nil, err
 		}
@@ -113,25 +119,30 @@ func GetEvents(client *ethclient.Client, erc20Contract *ERC20.ERC20, startBlock 
 		logs_arr := make([]interface{}, len(logs))
 
 		for log_indx, vLog := range logs {
-			// fmt.Printf("Log Block Number: %d\n", vLog.BlockNumber)
-			// fmt.Printf("Log Index: %d\n", vLog.Index)
 
 			// find the matching event
-			for event_indx, eventSigHash := range hashedEventSigs {
+			for event_indx, eventSigHash := range eventSigs {
 
 				if vLog.Topics[0].Hex() == eventSigHash.Hex() {
 
-					parsedEvent, err := parseEvent[event_indx](vLog)
+					parsedEvent, err := events[event_indx].ParseMethod(vLog)
 					if err != nil {
 						return nil, err
 					}
 					logs_arr[log_indx] = parsedEvent
+					stats[event_indx]++
 					break
 				}
 			}
 		}
 
-		fmt.Println(fromBlock.String(), " -> ", toBlock.String(), " | Logs: ", len(logs_arr))
+		if toBlock == nil {
+			bar.Finish()
+		} else {
+			bar.Add64(toBlock.Int64() - fromBlock.Int64())
+		}
+
+		// fmt.Println(fromBlock.String(), " -> ", toBlock.String(), " | Logs: ", len(logs_arr))
 
 		result = append(result, logs_arr...)
 
@@ -141,11 +152,70 @@ func GetEvents(client *ethclient.Client, erc20Contract *ERC20.ERC20, startBlock 
 		}
 
 		fromBlock = fromBlock.Add(toBlock, big.NewInt(1))
-
 		toBlock = setBigInt(endBlock)
 	}
 
+	for indx := range stats {
+		fmt.Println(events[indx].Name+" events:", stats[indx])
+	}
+
 	return result, nil
+}
+
+func setupProgressBar(client *ethclient.Client, startBlock *big.Int, endBlock *big.Int) (*progressbar.ProgressBar, error) {
+
+	var start int64 = 0
+	var end int64 = 0
+
+	if startBlock != nil {
+		start = startBlock.Int64()
+	}
+
+	if endBlock != nil {
+		end = endBlock.Int64()
+	} else {
+		header, err := client.HeaderByNumber(context.Background(), nil)
+		if err != nil {
+			return nil, err
+		}
+		end = header.Number.Int64()
+	}
+
+	return progressbar.NewOptions64(
+		end-start,
+		progressbar.OptionShowCount(),
+		progressbar.OptionShowIts(),
+		progressbar.OptionSetItsString("blocks"),
+		progressbar.OptionOnCompletion(func() {
+			fmt.Fprint(os.Stderr, "\n")
+		}),
+		progressbar.OptionSpinnerType(14),
+		progressbar.OptionSetWidth(25),
+		progressbar.OptionSetDescription("Fetching logs"),
+	), nil
+}
+
+func generateSignatures(events []EventWrapper) []common.Hash {
+
+	result := make([]common.Hash, len(events))
+
+	for event_indx, event := range events {
+
+		sig := event.Name + "("
+
+		for arg_indx, arg := range event.Args {
+			sig += arg
+			if arg_indx != len(event.Args)-1 {
+				sig += ","
+			} else {
+				sig += ")"
+			}
+		}
+
+		result[event_indx] = crypto.Keccak256Hash([]byte(sig))
+	}
+
+	return result
 }
 
 func setBigInt(value *big.Int) *big.Int {
@@ -183,9 +253,9 @@ func fetchEvents(client *ethclient.Client, fromBlock *big.Int, toBlock *big.Int,
 				}
 
 				// break loop if no change in params
-				// if (fromBlock != nil && fromBlock.Int64() == first) && (toBlock != nil && toBlock.Int64() == second) {
-				// 	break
-				// }
+				if (fromBlock != nil && fromBlock.Int64() == first) && (toBlock != nil && toBlock.Int64() == second) {
+					break
+				}
 
 				fromBlock = big.NewInt(first)
 				toBlock = big.NewInt(second)
