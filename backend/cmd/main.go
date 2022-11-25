@@ -3,6 +3,7 @@ package main
 import (
 	"backend/contracts/ERC20"
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"math/big"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/joho/godotenv"
@@ -27,49 +29,67 @@ func main() {
 
 	rpcUrl := os.Getenv("ALCHEMY_MAINNET_RPC_WS_URL")
 
-	client, err := ethclient.Dial(rpcUrl)
+	mainnetClient, err := ethclient.Dial(rpcUrl)
 	if err != nil {
 		panic(err)
 	}
 
-	// paymentContract, err := PaymentContract.NewPaymentContract(
-	// 	common.HexToAddress(PaymentContract.Address),
-	// 	client,
-	// )
-
 	erc20, err := ERC20.NewERC20(
 		common.HexToAddress(ERC20.Address),
-		client,
+		mainnetClient,
 	)
 
-	err = GetEvents(
-		client,
+	events, err := GetEvents(
+		mainnetClient,
 		erc20,
-		big.NewInt(16041981),
-		nil,
+		big.NewInt(6383820),
+		big.NewInt(6383840),
 		[]string{"Transfer(address,address,uint256)", "Approval(address,address,uint256)"},
+		[]func(types.Log) (interface{}, error){
+			func(log types.Log) (interface{}, error) {
+				return erc20.ParseTransfer(log)
+			},
+			func(log types.Log) (interface{}, error) {
+				return erc20.ParseApproval(log)
+			},
+		},
 	)
-
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// fmt.Println(paymentContract)
+	for _, event := range events {
+
+		// fmt.Println(reflect.TypeOf(event))
+
+		// transferEvent, ok := event.(*ERC20.ERC20Transfer)
+		// if ok {
+		// 	fmt.Println("Transfer")
+		// 	fmt.Println("From:", transferEvent.From)
+		// 	fmt.Println("To:", transferEvent.To)
+		// 	fmt.Println("Tokens", transferEvent.Tokens)
+		// }
+
+		switch obj := event.(type) {
+		case *ERC20.ERC20Transfer:
+			fmt.Println("Transfer")
+			fmt.Println("From:", obj.From)
+			fmt.Println("To:", obj.To)
+			fmt.Println("Tokens", obj.Tokens)
+		case *ERC20.ERC20Approval:
+			fmt.Println("Approve")
+			fmt.Println("Spender:", obj.Spender)
+			fmt.Println("TokenOwner:", obj.TokenOwner)
+			fmt.Println("Tokens", obj.Tokens)
+		default:
+			fmt.Printf("Strange Object")
+		}
+	}
+
+	// fmt.Println(len(events))
 }
 
-type LogTransfer struct {
-	From   common.Address
-	To     common.Address
-	Tokens *big.Int
-}
-
-type LogApproval struct {
-	TokenOwner common.Address
-	Spender    common.Address
-	Tokens     *big.Int
-}
-
-func GetEvents(client *ethclient.Client, erc20Contract *ERC20.ERC20, startBlock *big.Int, endBlock *big.Int, eventSignatures []string) error {
+func GetEvents(client *ethclient.Client, erc20Contract *ERC20.ERC20, startBlock *big.Int, endBlock *big.Int, eventSignatures []string, parseEvent []func(types.Log) (interface{}, error)) ([]interface{}, error) {
 
 	hashedEventSigs := make([]common.Hash, len(eventSignatures))
 
@@ -77,25 +97,69 @@ func GetEvents(client *ethclient.Client, erc20Contract *ERC20.ERC20, startBlock 
 		hashedEventSigs[indx] = crypto.Keccak256Hash([]byte(eventSignatures[indx]))
 	}
 
-	// contractAbi, err := abi.JSON(strings.NewReader(string(ERC20.ERC20ABI)))
-	// if err != nil {
-	// 	return err
-	// }
+	var fromBlock *big.Int = setBigInt(startBlock)
+	var toBlock *big.Int = setBigInt(endBlock)
 
-	eventSum := 0
-
-	var fromBlock *big.Int
-	var toBlock *big.Int
-
-	if startBlock != nil {
-		fromBlock = new(big.Int).Set(startBlock)
-	}
-	if endBlock != nil {
-		toBlock = new(big.Int).Set(endBlock)
-	}
+	result := make([]interface{}, 0)
 
 	for {
+		logs, newFromBlock, newToBlock, err := fetchEvents(client, fromBlock, toBlock, hashedEventSigs)
+		if err != nil {
+			return nil, err
+		}
+		fromBlock = newFromBlock
+		toBlock = newToBlock
 
+		logs_arr := make([]interface{}, len(logs))
+
+		for log_indx, vLog := range logs {
+			// fmt.Printf("Log Block Number: %d\n", vLog.BlockNumber)
+			// fmt.Printf("Log Index: %d\n", vLog.Index)
+
+			// find the matching event
+			for event_indx, eventSigHash := range hashedEventSigs {
+
+				if vLog.Topics[0].Hex() == eventSigHash.Hex() {
+
+					parsedEvent, err := parseEvent[event_indx](vLog)
+					if err != nil {
+						return nil, err
+					}
+					logs_arr[log_indx] = parsedEvent
+					break
+				}
+			}
+		}
+
+		fmt.Println(fromBlock.String(), " -> ", toBlock.String(), " | Logs: ", len(logs_arr))
+
+		result = append(result, logs_arr...)
+
+		// if this is the end, break
+		if toBlock.String() == endBlock.String() {
+			break
+		}
+
+		fromBlock = fromBlock.Add(toBlock, big.NewInt(1))
+
+		toBlock = setBigInt(endBlock)
+	}
+
+	return result, nil
+}
+
+func setBigInt(value *big.Int) *big.Int {
+
+	if value != nil {
+		return new(big.Int).Set(value)
+	}
+
+	return nil
+}
+
+func fetchEvents(client *ethclient.Client, fromBlock *big.Int, toBlock *big.Int, hashedEventSigs []common.Hash) ([]types.Log, *big.Int, *big.Int, error) {
+
+	for {
 		query := ethereum.FilterQuery{
 			FromBlock: fromBlock,
 			ToBlock:   toBlock,
@@ -111,90 +175,30 @@ func GetEvents(client *ethclient.Client, erc20Contract *ERC20.ERC20, startBlock 
 				numbers := strings.Split(split[1], " ")
 				first, err := strconv.ParseInt(strings.Replace(numbers[0], ",", "", -1)[2:], 16, 64)
 				if err != nil {
-					return err
+					return nil, nil, nil, err
 				}
 				second, err := strconv.ParseInt(strings.Replace(numbers[1], "]", "", -1)[2:], 16, 64)
 				if err != nil {
-					return err
+					return nil, nil, nil, err
 				}
+
+				// break loop if no change in params
+				// if (fromBlock != nil && fromBlock.Int64() == first) && (toBlock != nil && toBlock.Int64() == second) {
+				// 	break
+				// }
 
 				fromBlock = big.NewInt(first)
 				toBlock = big.NewInt(second)
+
 				continue
+
 			} else {
-				return err
+				return nil, nil, nil, err
 			}
 		}
 
-		for _, vLog := range logs {
-			// fmt.Printf("Log Block Number: %d\n", vLog.BlockNumber)
-			// fmt.Printf("Log Index: %d\n", vLog.Index)
-
-			for _, eventSigHash := range hashedEventSigs {
-
-				if vLog.Topics[0].Hex() == eventSigHash.Hex() {
-
-					transferEvent, err := erc20Contract.ParseTransfer(vLog)
-					if err != nil {
-						log.Fatal(err)
-					}
-
-					fmt.Printf("From: %s\n", transferEvent.From.String())
-					fmt.Printf("To: %s\n", transferEvent.To.String())
-					fmt.Printf("Tokens: %s\n", transferEvent.Tokens.String())
-
-					break
-				}
-			}
-
-			// switch vLog.Topics[0].Hex() {
-			// case logTransferSigHash.Hex():
-
-			// 	transferEvent, err := erc20Contract.ParseTransfer(vLog)
-			// 	if err != nil {
-			// 		log.Fatal(err)
-			// 	}
-
-			// 	// transferEvent.From = common.HexToAddress(vLog.Topics[1].Hex())
-			// 	// transferEvent.To = common.HexToAddress(vLog.Topics[2].Hex())
-
-			// 	fmt.Printf("From: %s\n", transferEvent.From.String())
-			// 	fmt.Printf("To: %s\n", transferEvent.To.String())
-			// 	fmt.Printf("Tokens: %s\n", transferEvent.Tokens.String())
-
-			// case logApprovalSigHash.Hex():
-
-			// 	var approvalEvent LogApproval
-
-			// 	approvalEvent, err := contractAbi.Unpack("Approval", vLog.Data)
-			// 	if err != nil {
-			// 		log.Fatal(err)
-			// 	}
-
-			// 	approvalEvent.TokenOwner = common.HexToAddress(vLog.Topics[1].Hex())
-			// 	approvalEvent.Spender = common.HexToAddress(vLog.Topics[2].Hex())
-
-			// 	// fmt.Printf("Tokens: %s\n", approvalEvent.Tokens.String())
-			// }
-		}
-
-		eventSum += len(logs)
-
-		fmt.Println(fromBlock.String(), " -> ", toBlock.String(), " | Logs: ", len(logs))
-
-		// if this is the end, break
-		if toBlock.String() == endBlock.String() {
-			break
-		}
-
-		fromBlock = fromBlock.Add(toBlock, big.NewInt(1))
-		toBlock = nil
-		if endBlock != nil {
-			toBlock = new(big.Int).Set(endBlock)
-		}
+		return logs, fromBlock, toBlock, nil
 	}
 
-	fmt.Println(eventSum)
-
-	return nil
+	return nil, nil, nil, errors.New("Fetching resulted in infinite loop!")
 }

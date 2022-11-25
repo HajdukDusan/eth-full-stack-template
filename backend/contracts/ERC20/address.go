@@ -1,3 +1,3 @@
 package ERC20
 
-var Address = "0xc3761EB917CD790B30dAD99f6Cc5b4Ff93C4F9eA"
+var Address = "0xe41d2489571d322189246dafa5ebde1f4699f498"
