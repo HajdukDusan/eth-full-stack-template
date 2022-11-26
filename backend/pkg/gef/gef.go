@@ -34,21 +34,38 @@ func GetLogs(
 	return getLogsInternal(client, contractAddresses, startBlock, endBlock, events)
 }
 
-// SendTx send the tx to the mempool
+// SendContractTx sends a contract tx to the mempool
 //
 // Arguments:
 //   - client - the ethclient client pointer
 //   - privateKey - EOA private key
 //   - value - eth value to be sent
 //   - initializeTx - method which to call
-func SendTx(
+func SendContractTx(
 	client *ethclient.Client,
 	privateKey string,
 	value *big.Int,
 	initializeTx func(*bind.TransactOpts) (*types.Transaction, error),
 ) (*types.Transaction, error) {
 
-	return sendTxInternal(client, privateKey, value, initializeTx)
+	return sendContractTxInternal(client, privateKey, value, initializeTx)
+}
+
+// SendContractTx sends a normal tx to the mempool
+//
+// Arguments:
+//   - client - the ethclient client pointer
+//   - privateKey - EOA private key
+//   - value - eth value to be sent
+//   - receiverAddress - address of the tx receiver
+func SendNormalTx(
+	client *ethclient.Client,
+	privateKey string,
+	value *big.Int,
+	receiverAddress string,
+) (*types.Transaction, error) {
+
+	return sendNormalTxInternal(client, privateKey, value, receiverAddress)
 }
 
 // WaitTxReceipt waits for the tx to be mined

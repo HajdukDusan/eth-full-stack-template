@@ -12,10 +12,32 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
+// subscripcija na event
+
+func SendNormalTx(client *ethclient.Client, privateKey string, receiverAddress string) {
+
+	// send tx
+	_, err := gef.SendNormalTx(
+		client,
+		privateKey,
+		big.NewInt(1000),
+		receiverAddress,
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// cant wait for receipt on localhost becase the tx finishes before wait starts
+	// receipt, err := gef.WaitTxReceipt(client, tx)
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+}
+
 func SendContractTx(client *ethclient.Client, privateKey string, stupidContractAPI *StupidContract.StupidContract) {
 
 	// send tx
-	tx, err := gef.SendTx(
+	tx, err := gef.SendContractTx(
 		client,
 		privateKey,
 		big.NewInt(1000),
@@ -40,7 +62,6 @@ func SendContractTx(client *ethclient.Client, privateKey string, stupidContractA
 		if err != nil {
 			fmt.Println(err)
 		}
-
 		fmt.Println(stupidEvent)
 	}
 }
@@ -63,7 +84,6 @@ func GetContractLogs(client *ethclient.Client, stupidContractAPI *StupidContract
 		nil,
 		nil,
 		[]gef.EventWrapper{
-			//event StupidEvent(uint256 index, address indexed sender, uint256 timestamp)
 			{
 				Name: "StupidEvent",
 				Args: []string{"uint256", "address", "uint256"},
