@@ -6,6 +6,7 @@ import (
 	"backend/pkg/gef"
 	"fmt"
 	"log"
+	"math/big"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -22,9 +23,11 @@ func SendContractTx(client *ethclient.Client, privateKey string) {
 		log.Fatal(err)
 	}
 
+	// send tx
 	tx, err := gef.SendTx(
 		client,
 		privateKey,
+		big.NewInt(100),
 		func(txOpts *bind.TransactOpts) (*types.Transaction, error) {
 			return stupidContractAPI.AddToRegistry(txOpts, "moj parametar")
 		},
@@ -33,13 +36,22 @@ func SendContractTx(client *ethclient.Client, privateKey string) {
 		log.Fatal(err)
 	}
 
+	// wait for tx to be mined
 	receipt, err := gef.WaitTxReceipt(client, tx)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// receipt should have created logs
-	fmt.Println(receipt.Logs)
+	// receipt will return emited events
+	for _, log := range receipt.Logs {
+
+		stupidEvent, err := stupidContractAPI.ParseStupidEvent(*log)
+		if err != nil {
+			fmt.Println(err)
+		}
+
+		fmt.Println(stupidEvent)
+	}
 }
 
 func CallViewFunc(client *ethclient.Client) {

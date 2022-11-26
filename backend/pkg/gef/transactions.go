@@ -15,21 +15,16 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
-func SendTx(client *ethclient.Client, privateKey string, initializeTx func(*bind.TransactOpts) (*types.Transaction, error)) (*types.Transaction, error) {
+func sendTxInternal(client *ethclient.Client, privateKey string, value *big.Int, initializeTx func(*bind.TransactOpts) (*types.Transaction, error)) (*types.Transaction, error) {
 
-	txOpts, err := createTransactionOptions(client, privateKey, big.NewInt(1000))
+	txOpts, err := createTransactionOptions(client, privateKey, value)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	tx, err := initializeTx(txOpts)
 	if err != nil {
-
-		s_tmp := strings.Split(err.Error(), "'")
-		if len(s_tmp) < 2 {
-			return nil, err
-		}
-		return nil, errors.New(s_tmp[1])
+		return nil, tryToExtractErrorCode(err)
 	}
 
 	fmt.Println("\nsent tx:")
@@ -42,10 +37,10 @@ func SendTx(client *ethclient.Client, privateKey string, initializeTx func(*bind
 	return tx, nil
 }
 
-func WaitTxReceipt(client *ethclient.Client, tx *types.Transaction) (*types.Receipt, error) {
+func waitTxReceiptInternal(client *ethclient.Client, tx *types.Transaction) (*types.Receipt, error) {
 	receipt, err := bind.WaitMined(context.Background(), client, tx)
 	if err != nil {
-		return nil, err
+		return nil, tryToExtractErrorCode(err)
 	}
 
 	fmt.Println("\ntx receipt:")
@@ -53,6 +48,14 @@ func WaitTxReceipt(client *ethclient.Client, tx *types.Transaction) (*types.Rece
 	fmt.Println("\ttxFee:", receipt.GasUsed*tx.GasPrice().Uint64())
 
 	return receipt, nil
+}
+
+func tryToExtractErrorCode(err error) error {
+	s_tmp := strings.Split(err.Error(), "'")
+	if len(s_tmp) < 2 {
+		return err
+	}
+	return errors.New(s_tmp[1])
 }
 
 func createTransactionOptions(client *ethclient.Client, privateKey string, value *big.Int) (*bind.TransactOpts, error) {
