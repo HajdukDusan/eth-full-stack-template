@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"math/big"
 	"os"
 	"strconv"
@@ -153,21 +154,55 @@ func setBigInt(value *big.Int) *big.Int {
 	return nil
 }
 
-func fetchEvents(client *ethclient.Client, contractAddress []string, fromBlock *big.Int, toBlock *big.Int, hashedEventSigs []common.Hash) ([]types.Log, *big.Int, *big.Int, error) {
-
-	addresses := make([]common.Address, len(contractAddress))
+func convertAddresses(addresses []string) []common.Address {
+	result := make([]common.Address, len(addresses))
 
 	for indx := range addresses {
-		addresses[indx] = common.HexToAddress(contractAddress[indx])
+		result[indx] = common.HexToAddress(addresses[indx])
+	}
+
+	return result
+}
+
+func getQuery(fromBlock *big.Int, toBlock *big.Int, addresses []common.Address, eventSigs []common.Hash) ethereum.FilterQuery {
+
+	return ethereum.FilterQuery{
+		FromBlock: fromBlock,
+		ToBlock:   toBlock,
+		Addresses: addresses,
+		Topics:    [][]common.Hash{eventSigs},
+	}
+}
+
+func subscribeToEventsInternal(client *ethclient.Client, contractAddresses []string, events []EventWrapper) {
+
+	addresses := convertAddresses(contractAddresses)
+	eventSigs := generateSignatures(events)
+
+	query := getQuery(nil, nil, addresses, eventSigs)
+
+	logs := make(chan types.Log)
+	sub, err := client.SubscribeFilterLogs(context.Background(), query, logs)
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	for {
-		query := ethereum.FilterQuery{
-			FromBlock: fromBlock,
-			ToBlock:   toBlock,
-			Addresses: addresses,
-			Topics:    [][]common.Hash{hashedEventSigs},
+		select {
+		case err := <-sub.Err():
+			log.Fatal(err)
+		case vLog := <-logs:
+			fmt.Println(vLog) // pointer to event log
 		}
+	}
+}
+
+func fetchEvents(client *ethclient.Client, contractAddresses []string, fromBlock *big.Int, toBlock *big.Int, eventSigs []common.Hash) ([]types.Log, *big.Int, *big.Int, error) {
+
+	addresses := convertAddresses(contractAddresses)
+
+	for {
+		query := getQuery(fromBlock, toBlock, addresses, eventSigs)
 
 		logs, err := client.FilterLogs(context.Background(), query)
 		if err != nil {

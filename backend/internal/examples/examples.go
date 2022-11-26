@@ -12,7 +12,14 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
-// subscripcija na event
+func SubscribeToEvent(client *ethclient.Client, stupidContractAPI *StupidContract.StupidContract) {
+
+	go gef.SubscribeToEvent(
+		client,
+		[]string{StupidContract.Address},
+		[]gef.EventWrapper{},
+	)
+}
 
 func SendNormalTx(client *ethclient.Client, privateKey string, receiverAddress string) {
 

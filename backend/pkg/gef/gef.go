@@ -34,6 +34,20 @@ func GetLogs(
 	return getLogsInternal(client, contractAddresses, startBlock, endBlock, events)
 }
 
+// SubscribeToEvent lets you listen for new events (need to use wss).
+//
+// Arguments:
+//   - client - the ethclient client pointer
+//   - contractAddresses - list of contracts to scan for logs
+//   - events - the list of EventWrapper objects
+func SubscribeToEvent(
+	client *ethclient.Client,
+	contractAddresses []string,
+	events []EventWrapper,
+) {
+	subscribeToEventsInternal(client, contractAddresses, events)
+}
+
 // SendContractTx sends a contract tx to the mempool
 //
 // Arguments:
