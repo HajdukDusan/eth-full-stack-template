@@ -1,7 +1,6 @@
 package examples
 
 import (
-	"backend/contracts/ERC20"
 	"backend/contracts/StupidContract"
 	"backend/pkg/gef"
 	"fmt"
@@ -9,25 +8,17 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
-func SendContractTx(client *ethclient.Client, privateKey string) {
-	stupidContractAPI, err := StupidContract.NewStupidContract(
-		common.HexToAddress(StupidContract.Address),
-		client,
-	)
-	if err != nil {
-		log.Fatal(err)
-	}
+func SendContractTx(client *ethclient.Client, privateKey string, stupidContractAPI *StupidContract.StupidContract) {
 
 	// send tx
 	tx, err := gef.SendTx(
 		client,
 		privateKey,
-		big.NewInt(100),
+		big.NewInt(1000),
 		func(txOpts *bind.TransactOpts) (*types.Transaction, error) {
 			return stupidContractAPI.AddToRegistry(txOpts, "moj parametar")
 		},
@@ -54,15 +45,7 @@ func SendContractTx(client *ethclient.Client, privateKey string) {
 	}
 }
 
-func CallViewFunc(client *ethclient.Client) {
-
-	stupidContractAPI, err := StupidContract.NewStupidContract(
-		common.HexToAddress(StupidContract.Address),
-		client,
-	)
-	if err != nil {
-		log.Fatal(err)
-	}
+func CallContractViewFunc(client *ethclient.Client, stupidContractAPI *StupidContract.StupidContract) {
 
 	result, err := stupidContractAPI.StupidContractDescription(nil)
 	if err != nil {
@@ -72,33 +55,20 @@ func CallViewFunc(client *ethclient.Client) {
 	fmt.Println(result)
 }
 
-func GetLogs(client *ethclient.Client) {
-
-	erc20API, err := ERC20.NewERC20(
-		common.HexToAddress(ERC20.Address),
-		client,
-	)
-	if err != nil {
-		log.Fatal(err)
-	}
+func GetContractLogs(client *ethclient.Client, stupidContractAPI *StupidContract.StupidContract) {
 
 	events, err := gef.GetLogs(
 		client,
+		[]string{StupidContract.Address},
 		nil,
 		nil,
 		[]gef.EventWrapper{
+			//event StupidEvent(uint256 index, address indexed sender, uint256 timestamp)
 			{
-				Name: "Transfer",
-				Args: []string{"address", "address", "uint256"},
+				Name: "StupidEvent",
+				Args: []string{"uint256", "address", "uint256"},
 				ParseMethod: func(log types.Log) (interface{}, error) {
-					return erc20API.ParseTransfer(log)
-				},
-			},
-			{
-				Name: "Approval",
-				Args: []string{"address", "address", "uint256"},
-				ParseMethod: func(log types.Log) (interface{}, error) {
-					return erc20API.ParseApproval(log)
+					return stupidContractAPI.ParseStupidEvent(log)
 				},
 			},
 		},
@@ -107,22 +77,15 @@ func GetLogs(client *ethclient.Client) {
 		log.Fatal(err)
 	}
 
-	fmt.Println(len(events))
-
-	// for _, event := range events {
-	// 	switch obj := event.(type) {
-	// 	case *ERC20.ERC20Transfer:
-	// 		fmt.Println("Transfer")
-	// 		fmt.Println("From:", obj.From)
-	// 		fmt.Println("To:", obj.To)
-	// 		fmt.Println("Tokens", obj.Tokens)
-	// 	case *ERC20.ERC20Approval:
-	// 		fmt.Println("Approve")
-	// 		fmt.Println("Spender:", obj.Spender)
-	// 		fmt.Println("TokenOwner:", obj.TokenOwner)
-	// 		fmt.Println("Tokens", obj.Tokens)
-	// 	default:
-	// 		fmt.Printf("Strange Object")
-	// 	}
-	// }
+	for _, event := range events {
+		switch obj := event.(type) {
+		case *StupidContract.StupidContractStupidEvent:
+			fmt.Println("StupidEvent")
+			fmt.Println("\tIndex:", obj.Index)
+			fmt.Println("\tSender:", obj.Sender)
+			fmt.Println("\tTimestamp:", obj.Timestamp)
+		default:
+			fmt.Printf("Unexpected log object")
+		}
+	}
 }

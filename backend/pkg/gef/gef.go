@@ -18,18 +18,20 @@ type EventWrapper struct {
 //
 // Arguments:
 //   - client - the ethclient client pointer
+//   - contractAddresses - list of contracts to scan for logs
 //   - startBlock - if nil start from block 0
 //   - endBlock - if nil end at the most recent block
 //   - events - the list of EventWrapper objects that contains the name of the event, its arg types and
 //     a ParseMethod which determains how the fetched log should be parsed
 func GetLogs(
 	client *ethclient.Client,
+	contractAddresses []string,
 	startBlock *big.Int,
 	endBlock *big.Int,
 	events []EventWrapper,
 ) ([]interface{}, error) {
 
-	return getLogsInternal(client, startBlock, endBlock, events)
+	return getLogsInternal(client, contractAddresses, startBlock, endBlock, events)
 }
 
 // SendTx send the tx to the mempool

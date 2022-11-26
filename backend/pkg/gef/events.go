@@ -1,7 +1,6 @@
 package gef
 
 import (
-	"backend/contracts/ERC20"
 	"context"
 	"errors"
 	"fmt"
@@ -18,7 +17,7 @@ import (
 	"github.com/schollz/progressbar/v3"
 )
 
-func getLogsInternal(client *ethclient.Client, startBlock *big.Int, endBlock *big.Int, events []EventWrapper) ([]interface{}, error) {
+func getLogsInternal(client *ethclient.Client, contractAddresses []string, startBlock *big.Int, endBlock *big.Int, events []EventWrapper) ([]interface{}, error) {
 
 	eventSigs := generateSignatures(events)
 
@@ -35,7 +34,7 @@ func getLogsInternal(client *ethclient.Client, startBlock *big.Int, endBlock *bi
 	}
 
 	for {
-		logs, newFromBlock, newToBlock, err := fetchEvents(client, fromBlock, toBlock, eventSigs)
+		logs, newFromBlock, newToBlock, err := fetchEvents(client, contractAddresses, fromBlock, toBlock, eventSigs)
 		if err != nil {
 			return nil, err
 		}
@@ -154,13 +153,19 @@ func setBigInt(value *big.Int) *big.Int {
 	return nil
 }
 
-func fetchEvents(client *ethclient.Client, fromBlock *big.Int, toBlock *big.Int, hashedEventSigs []common.Hash) ([]types.Log, *big.Int, *big.Int, error) {
+func fetchEvents(client *ethclient.Client, contractAddress []string, fromBlock *big.Int, toBlock *big.Int, hashedEventSigs []common.Hash) ([]types.Log, *big.Int, *big.Int, error) {
+
+	addresses := make([]common.Address, len(contractAddress))
+
+	for indx := range addresses {
+		addresses[indx] = common.HexToAddress(contractAddress[indx])
+	}
 
 	for {
 		query := ethereum.FilterQuery{
 			FromBlock: fromBlock,
 			ToBlock:   toBlock,
-			Addresses: []common.Address{common.HexToAddress(ERC20.Address)},
+			Addresses: addresses,
 			Topics:    [][]common.Hash{hashedEventSigs},
 		}
 
