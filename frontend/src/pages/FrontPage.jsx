@@ -1,204 +1,101 @@
-import {
-  Box,
-  TableContainer,
-  Table,
-  TableCaption,
-  Thead,
-  Tr,
-  Th,
-  Tbody,
-  Td,
-  Button,
-  Popover,
-  PopoverTrigger,
-  Stack,
-  Input,
-  ButtonGroup,
-  useDisclosure,
-  PopoverContent,
-  PopoverArrow,
-  PopoverCloseButton,
-  Text,
-  Select,
-  Flex,
-  Center,
-  FormControl,
-  FormLabel,
-} from "@chakra-ui/react";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import { Box, Button, Input, Text, Center, FormLabel } from "@chakra-ui/react";
+import React, { useRef, useState, useEffect } from "react";
+
 import BigDecimal from "js-big-decimal";
+
 import { ethers } from "ethers";
-import { ABI, address } from "../contracts/PaymentContract";
+
+import StupidContract from "../contracts/StupidContract";
 
 const FrontPage = () => {
-  const [receivers, setReceivers] = useState([]);
+  const [errorMessage, setErrorMessage] = useState(null);
 
-  const newReceiverAddressRef = useRef(null);
-  const newReceiverValueRef = useRef(null);
+  const [provider, setProvider] = useState(null);
 
-  const [currency, setCurrency] = useState("ETH");
+  const [networkChainId, setChainId] = useState(null);
+  const [defaultAccount, setDefaultAccount] = useState(null);
+  const [userBalance, setUserBalance] = useState(null);
 
-  const { onOpen, onClose, isOpen } = useDisclosure();
-  const firstFieldRef = React.useRef(null);
+  async function connect() {
+    if (window.ethereum) {
+      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      setProvider(provider);
+      setChainId((await provider.getNetwork()).chainId);
+      provider.send("eth_requestAccounts", []).then(async () => {
+        await accountChangedHandler(provider.getSigner());
+      });
+    } else {
+      setErrorMessage("Please Install Metamask!!!");
+    }
+  }
 
-  const handleClick = () => {
-    setReceivers((receivers) => [
-      ...receivers,
-      {
-        address: newReceiverAddressRef.current.value,
-        value: newReceiverValueRef.current.value,
-      },
-    ]);
-    onClose();
-  };
+  async function disconnect() {
+    setDefaultAccount(null);
+    setUserBalance(null);
+    setProvider(null);
+    setChainId(null);
+  }
 
+  async function callContractViewFunc() { 
 
-  const handleCurrencyChange = (event) => {
-    setCurrency(event.target.value);
-  };
+    const contract = new ethers.Contract(StupidContract.Address, StupidContract.ABI, provider)
 
-  const getReceiversTotal = () => {
-    let total = new BigDecimal(0);
+    alert(await contract.StupidContractDescription())
+  }
 
-    receivers.forEach((receiver) => {
-      total = total.add(new BigDecimal(receiver.value));
-    });
+  async function contractTx() { 
 
-    return total;
-  };
+    const contract = new ethers.Contract(StupidContract.Address, StupidContract.ABI, provider)
 
-  const getDepositMinimum = () => {
-    const receiversTotal = getReceiversTotal();
-    const fee = getFee();
+    alert(await contract.StupidContractDescription())
+  }
 
-    return receiversTotal.add(fee);
-  };
-
-  const getFee = () => {
-    let total = getReceiversTotal();
-    return total.multiply(new BigDecimal("0.03"));
-  };
-
-  const FormAddReceiver = ({ firstFieldRef, onCancel }) => {
-    return (
-      <Stack spacing={4}>
-        <Text>Address:</Text>
-        <Input placeholder="0x0.." id="address" ref={newReceiverAddressRef} />
-        <Text>Value:</Text>
-        <Input placeholder="0" id="value" ref={newReceiverValueRef} />
-        <ButtonGroup display="flex" justifyContent="flex-end">
-          <Button variant="outline" onClick={onCancel}>
-            Cancel
-          </Button>
-          <Button onClick={handleClick} colorScheme="teal" size="md">
-            Save
-          </Button>
-        </ButtonGroup>
-      </Stack>
-    );
+  const accountChangedHandler = async (newAccount) => {
+    const address = await newAccount.getAddress();
+    setDefaultAccount(address);
+    const balance = await newAccount.getBalance();
+    setUserBalance(ethers.utils.formatEther(balance));
   };
 
   return (
-    <Box maxW="4xl" mx={"auto"} pt={5} px={{ base: 2, sm: 12, md: 17 }}>
-      <br></br>
-
-      <Flex
-        flexDirection="row"
-        justifyContent="space-between"
-        alignItems="center"
-        width="100%"
-        as="nav"
-        p={4}
-        mx="auto"
-        maxWidth="1150px"
-        marginBottom="40px"
-        maxW="8xl"
-      >
-        <Box>
-          <Popover
-            isOpen={isOpen}
-            initialFocusRef={firstFieldRef}
-            onOpen={onOpen}
-            onClose={onClose}
-            placement="right"
-            closeOnBlur={false}
-          >
-            <PopoverTrigger>
-              <Button colorScheme="teal" size="md">
-                Add Receiver
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent p={5}>
-              <PopoverArrow />
-              <PopoverCloseButton />
-              <FormAddReceiver
-                firstFieldRef={firstFieldRef}
-                onCancel={onClose}
-              />
-            </PopoverContent>
-          </Popover>
-        </Box>
-        <Box>
-          <Select onClick={handleCurrencyChange}>
-            <option value="ETH">ETH</option>
-            <option value="DAI">DAI</option>
-            <option value="USDC">USDC</option>
-          </Select>
-        </Box>
-      </Flex>
-
-      {receivers && (
-        <TableContainer>
-          <Table variant="simple">
-            <TableCaption>Receivers</TableCaption>
-            <Thead>
-              <Tr>
-                <Th>Number</Th>
-                <Th>Address</Th>
-                <Th isNumeric>Value </Th>
-              </Tr>
-            </Thead>
-            <Tbody>
-              {receivers.map((receiver, index) => (
-                <Tr>
-                  <Td>{index + 1}</Td>
-                  <Td>{receiver.address}</Td>
-                  <Td isNumeric>
-                    {receiver.value} {currency}
-                  </Td>
-                </Tr>
-              ))}
-            </Tbody>
-          </Table>
-        </TableContainer>
-      )}
-
-      <Text>Receivers Total: {getReceiversTotal().getPrettyValue()}</Text>
-      <Text>Fee: {getFee().getPrettyValue()}</Text>
-      <br></br>
-      <Text>Deposit Minimum: {getDepositMinimum().getPrettyValue()}</Text>
-
-      <Box maxW="2xl" mx={"auto"} pt={10} px={{ base: 20, sm: 15, md: 20 }}>
-        <FormLabel color="white">Deposit Value</FormLabel>
-        <Input
-          placeholder={getDepositMinimum().getPrettyValue()}
-          // onChange={(event) => setAddress(event.target.value)}
-          type="text"
-          // value={address}
-        />
-        <br></br>
-        <br></br>
-        <Button
-          marginTop={4}
-          type="submit"
-          colorScheme="teal"
-        >
-          Deposit
-        </Button>
+    <>
+      <Box maxW="2xl" mx={"auto"} pt={1} px={{ base: 2, sm: 12, md: 17 }}>
+        <Center>
+          <Text fontSize="6xl">Stupid Contract Front</Text>
+        </Center>
       </Box>
 
-      <Box></Box>
-    </Box>
+      <Box maxW="4xl" mx={"auto"} pt={5} px={{ base: 2, sm: 12, md: 17 }}>
+        <br></br>
+
+        <Text fontSize="2xl">Chain ID: {networkChainId}</Text>
+        <Text fontSize="2xl">Connected With: {defaultAccount}</Text>
+        <Text fontSize="2xl">Wallet Amount: {userBalance} ETH</Text>
+
+        <Box maxW="2xl" mx={"auto"} pt={10} px={{ base: 20, sm: 15, md: 20 }}>
+          <Button onClick={connect}>Connect Wallet</Button>
+
+          <br></br>
+          <br></br>
+
+          <Button onClick={disconnect}>Disconnect Wallet</Button>
+
+          <br></br>
+          <br></br>
+
+          <Button onClick={callContractViewFunc}>Contract Call View Function</Button>
+
+          <FormLabel color="white">Message</FormLabel>
+          <Input
+            // onChange={(event) => setAddress(event.target.value)}
+            type="text"
+            // value={address}
+          />
+        </Box>
+      </Box>
+
+      {errorMessage}
+    </>
   );
 };
 

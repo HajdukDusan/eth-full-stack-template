@@ -32,10 +32,10 @@ const exportForFront = (contractName, address) => {
 
         const dirWrite = path.resolve(
             __dirname,
-            "../../frontend/contracts/" + contractName + ".js"
+            "../../frontend/src/contracts/" + contractName + ".js"
         );
 
-        fs.writeFileSync(dirWrite, "import { ethers } from \"ethers\"; \nexport const ABI= " + JSON.stringify(abi, null, 2) + "\nexport const address= \"" + address + "\"\nexport const contract=new ethers.Contract(address, ABI)", (err) => {
+        fs.writeFileSync(dirWrite, "const ABI= " + JSON.stringify(abi, null, 2) + "\nconst Address = \"" + address + "\"\nexport default {Address, ABI}", (err) => {
             if (err) {
                 console.log(err);
             }
