@@ -14,11 +14,38 @@ import (
 
 func SubscribeToEvent(client *ethclient.Client, stupidContractAPI *StupidContract.StupidContract) {
 
+	ch := make(chan interface{})
+
 	go gef.SubscribeToEvent(
 		client,
+		ch,
 		[]string{StupidContract.Address},
-		[]gef.EventWrapper{},
+		[]gef.EventWrapper{
+			{
+				Name: "StupidEvent",
+				Args: []string{"uint256", "address", "uint256"},
+				ParseMethod: func(log types.Log) (interface{}, error) {
+					return stupidContractAPI.ParseStupidEvent(log)
+				},
+			},
+		},
 	)
+
+	go func() {
+		for {
+			log := <-ch
+			fmt.Println("From sub:", log)
+			switch obj := log.(type) {
+			case *StupidContract.StupidContractStupidEvent:
+				fmt.Println("StupidEvent")
+				fmt.Println("\tIndex:", obj.Index)
+				fmt.Println("\tSender:", obj.Sender)
+				fmt.Println("\tTimestamp:", obj.Timestamp)
+			default:
+				fmt.Printf("Unexpected log object")
+			}
+		}
+	}()
 }
 
 func SendNormalTx(client *ethclient.Client, privateKey string, receiverAddress string) {

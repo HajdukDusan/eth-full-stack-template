@@ -27,7 +27,7 @@ func getLogsInternal(client *ethclient.Client, contractAddresses []string, start
 
 	result := make([]interface{}, 0)
 
-	stats := make([]int64, len(eventSigs))
+	stats := make([]uint64, len(eventSigs))
 
 	bar, err := setupProgressBar(client, fromBlock, toBlock)
 	if err != nil {
@@ -42,25 +42,11 @@ func getLogsInternal(client *ethclient.Client, contractAddresses []string, start
 		fromBlock = newFromBlock
 		toBlock = newToBlock
 
-		logs_arr := make([]interface{}, len(logs))
-
-		for log_indx, vLog := range logs {
-
-			// find the matching event
-			for event_indx, eventSigHash := range eventSigs {
-
-				if vLog.Topics[0].Hex() == eventSigHash.Hex() {
-
-					parsedEvent, err := events[event_indx].ParseMethod(vLog)
-					if err != nil {
-						return nil, err
-					}
-					logs_arr[log_indx] = parsedEvent
-					stats[event_indx]++
-					break
-				}
-			}
+		logs_arr, err := parseLogs(logs, events, eventSigs, stats)
+		if err != nil {
+			return nil, err
 		}
+
 		updateProgressBar(bar, fromBlock, toBlock)
 
 		result = append(result, logs_arr...)
@@ -174,7 +160,7 @@ func getQuery(fromBlock *big.Int, toBlock *big.Int, addresses []common.Address, 
 	}
 }
 
-func subscribeToEventsInternal(client *ethclient.Client, contractAddresses []string, events []EventWrapper) {
+func subscribeToEventsInternal(client *ethclient.Client, eventCh chan interface{}, contractAddresses []string, events []EventWrapper) {
 
 	addresses := convertAddresses(contractAddresses)
 	eventSigs := generateSignatures(events)
@@ -190,11 +176,54 @@ func subscribeToEventsInternal(client *ethclient.Client, contractAddresses []str
 	for {
 		select {
 		case err := <-sub.Err():
-			log.Fatal(err)
-		case vLog := <-logs:
-			fmt.Println(vLog) // pointer to event log
+			fmt.Println(err)
+		case log := <-logs:
+
+			parsedLog, err := parseLog(log, events, eventSigs, nil)
+			if err != nil {
+				fmt.Println(err)
+			}
+			eventCh <- parsedLog
 		}
 	}
+}
+
+func parseLogs(logs []types.Log, events []EventWrapper, eventSigs []common.Hash, stats []uint64) ([]interface{}, error) {
+
+	result := make([]interface{}, len(logs))
+
+	for index, log := range logs {
+
+		parsedLog, err := parseLog(log, events, eventSigs, stats)
+		if err != nil {
+			return nil, err
+		}
+		result[index] = parsedLog
+	}
+
+	return result, nil
+}
+
+// stats should be nil or as long as eventSigs
+func parseLog(log types.Log, events []EventWrapper, eventSigs []common.Hash, stats []uint64) (interface{}, error) {
+
+	// find the matching event
+	for event_indx, eventSigHash := range eventSigs {
+
+		if log.Topics[0].Hex() == eventSigHash.Hex() {
+
+			parsedEvent, err := events[event_indx].ParseMethod(log)
+			if err != nil {
+				return nil, err
+			}
+			if stats != nil {
+				stats[event_indx]++
+			}
+			return parsedEvent, nil
+		}
+	}
+
+	return nil, errors.New("No matching event for log was found")
 }
 
 func fetchEvents(client *ethclient.Client, contractAddresses []string, fromBlock *big.Int, toBlock *big.Int, eventSigs []common.Hash) ([]types.Log, *big.Int, *big.Int, error) {

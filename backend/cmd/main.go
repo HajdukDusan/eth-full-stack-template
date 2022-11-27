@@ -5,6 +5,7 @@ import (
 	"backend/internal/examples"
 	"log"
 	"os"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -40,10 +41,23 @@ func main() {
 		log.Fatal(err)
 	}
 
+	// usage examples
+
+	go examples.SubscribeToEvent(client, stupidContractAPI)
+
+	time.Sleep(5 * time.Second)
+
 	// examples.SendNormalTx(client, privKey, "0x70997970C51812dc3A010C7d01b50e0d17dc79C8")
+	examples.SendContractTx(client, privKey, stupidContractAPI)
+
+	time.Sleep(5 * time.Second)
 
 	examples.SendContractTx(client, privKey, stupidContractAPI)
-	examples.GetContractLogs(client, stupidContractAPI)
+
+	time.Sleep(10 * time.Second)
+
+	examples.SendContractTx(client, privKey, stupidContractAPI)
+	// examples.GetContractLogs(client, stupidContractAPI)
 	// examples.CallContractViewFunc(client, stupidContractAPI)
 
 }

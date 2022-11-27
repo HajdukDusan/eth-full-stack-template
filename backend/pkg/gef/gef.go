@@ -38,14 +38,16 @@ func GetLogs(
 //
 // Arguments:
 //   - client - the ethclient client pointer
+//   - channel - chan to push new logs into
 //   - contractAddresses - list of contracts to scan for logs
 //   - events - the list of EventWrapper objects
 func SubscribeToEvent(
 	client *ethclient.Client,
+	channel chan interface{},
 	contractAddresses []string,
 	events []EventWrapper,
 ) {
-	subscribeToEventsInternal(client, contractAddresses, events)
+	subscribeToEventsInternal(client, channel, contractAddresses, events)
 }
 
 // SendContractTx sends a contract tx to the mempool
