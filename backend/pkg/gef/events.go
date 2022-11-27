@@ -178,12 +178,13 @@ func subscribeToEventsInternal(client *ethclient.Client, eventCh chan interface{
 		case err := <-sub.Err():
 			fmt.Println(err)
 		case log := <-logs:
-
-			parsedLog, err := parseLog(log, events, eventSigs, nil)
-			if err != nil {
-				fmt.Println(err)
-			}
-			eventCh <- parsedLog
+			go func() {
+				parsedLog, err := parseLog(log, events, eventSigs, nil)
+				if err != nil {
+					fmt.Println(err)
+				}
+				eventCh <- parsedLog
+			}()
 		}
 	}
 }
