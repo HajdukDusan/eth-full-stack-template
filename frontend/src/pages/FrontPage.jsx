@@ -8,6 +8,9 @@ import { ethers } from "ethers";
 import StupidContract from "../contracts/StupidContract";
 
 const FrontPage = () => {
+  const viewIndexInputRef = useRef();
+  const txMsgInputRef = useRef();
+
   const [errorMessage, setErrorMessage] = useState(null);
 
   const [provider, setProvider] = useState(null);
@@ -25,7 +28,7 @@ const FrontPage = () => {
         await accountChangedHandler(provider.getSigner());
       });
     } else {
-      setErrorMessage("Please Install Metamask!!!");
+      setErrorMessage("Please Install Metamask.");
     }
   }
 
@@ -36,18 +39,45 @@ const FrontPage = () => {
     setChainId(null);
   }
 
-  async function callContractViewFunc() { 
+  async function callContractViewFunc() {
+    const contract = new ethers.Contract(
+      StupidContract.Address,
+      StupidContract.ABI,
+      provider
+    );
 
-    const contract = new ethers.Contract(StupidContract.Address, StupidContract.ABI, provider)
 
-    alert(await contract.StupidContractDescription())
+
+    const result = await contract.stupidRegistry(viewIndexInputRef.current.value);
+
+    alert(result);
   }
 
-  async function contractTx() { 
+  async function contractTx() {
+    const signer = await provider.getSigner(defaultAccount);
 
-    const contract = new ethers.Contract(StupidContract.Address, StupidContract.ABI, provider)
+    const contractWithSigner = new ethers.Contract(
+      StupidContract.Address,
+      StupidContract.ABI,
+      signer
+    );
 
-    alert(await contract.StupidContractDescription())
+    //const txOptions = {value: ethers.utils.parseEther("1.0")}
+    const txOptions = { value: 1000 };
+
+    let tx = await contractWithSigner.AddToRegistry(
+      txMsgInputRef.current.value,
+      txOptions
+    );
+    console.log(tx.hash);
+
+    const receipt = await tx.wait();
+    if (receipt.status !== 1) {
+      alert("Tx failed!");
+      return;
+    }
+
+    console.log(receipt);
   }
 
   const accountChangedHandler = async (newAccount) => {
@@ -83,14 +113,18 @@ const FrontPage = () => {
           <br></br>
           <br></br>
 
-          <Button onClick={callContractViewFunc}>Contract Call View Function</Button>
+          <Button onClick={callContractViewFunc}>
+            Contract Call View Function
+          </Button>
+          <FormLabel color="white">Index parameter</FormLabel>
+          <Input ref={viewIndexInputRef} type="text" />
 
-          <FormLabel color="white">Message</FormLabel>
-          <Input
-            // onChange={(event) => setAddress(event.target.value)}
-            type="text"
-            // value={address}
-          />
+          <br></br>
+          <br></br>
+
+          <Button onClick={contractTx}>Create Contract Tx</Button>
+          <FormLabel color="white">Message parameter</FormLabel>
+          <Input ref={txMsgInputRef} type="text" />
         </Box>
       </Box>
 
