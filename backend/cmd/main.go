@@ -21,12 +21,12 @@ func main() {
 	}
 
 	// privKey := os.Getenv("MAINNET_PRIVATE_KEY")
-	privKey := os.Getenv("GOERLI_PRIVATE_KEY")
-	// privKey := os.Getenv("LOCALHOST_PRIVATE_KEY")
+	// privKey := os.Getenv("GOERLI_PRIVATE_KEY")
+	privKey := os.Getenv("LOCALHOST_PRIVATE_KEY")
 
 	// rpcUrl := os.Getenv("ALCHEMY_MAINNET_RPC_WS_URL")
-	rpcUrl := os.Getenv("ALCHEMY_GOERLI_RPC_WS_URL")
-	// rpcUrl := os.Getenv("LOCALHOST_RPC_WS_URL")
+	// rpcUrl := os.Getenv("ALCHEMY_GOERLI_RPC_WS_URL")
+	rpcUrl := os.Getenv("LOCALHOST_RPC_WS_URL")
 
 	client, err := ethclient.Dial(rpcUrl)
 	if err != nil {
