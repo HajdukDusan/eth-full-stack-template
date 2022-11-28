@@ -35,7 +35,7 @@ const exportForFront = (contractName, address) => {
             "../../frontend/src/contracts/" + contractName + ".js"
         );
 
-        fs.writeFileSync(dirWrite, "const ABI= " + JSON.stringify(abi, null, 2) + "\nconst Address = \"" + address + "\"\nexport default {Address, ABI}", (err) => {
+        fs.writeFileSync(dirWrite, "import { ethers } from \"ethers\"\nconst ABI= " + JSON.stringify(abi, null, 2) + "\nconst Address = \"" + address + "\"\nconst Contract = new ethers.Contract(Address, ABI)\nexport {Contract, Address, ABI}", (err) => {
             if (err) {
                 console.log(err);
             }

@@ -13,7 +13,7 @@ import BigDecimal from "js-big-decimal";
 
 import { ethers } from "ethers";
 
-import StupidContract from "../contracts/StupidContract";
+import { Contract, Address, ABI } from "../contracts/StupidContract";
 
 const FrontPage = () => {
   const viewIndexInputRef = useRef();
@@ -21,15 +21,8 @@ const FrontPage = () => {
 
   const [provider, setProvider] = useState(null);
   const [networkChainId, setChainId] = useState(null);
-
-  const [signer, setSigner] = useState(null);
   const [walletAddress, setWalletAddress] = useState(null);
   const [userBalance, setUserBalance] = useState(null);
-
-  const stupidContract = new ethers.Contract(
-    StupidContract.Address,
-    StupidContract.ABI
-  );
 
   async function connect() {
     if (window.ethereum) {
@@ -45,8 +38,6 @@ const FrontPage = () => {
 
           setWalletAddress(await signer.getAddress());
           setUserBalance(ethers.utils.formatEther(await signer.getBalance()));
-          stupidContract.connect(signer);
-          setSigner(signer);
         })
         .catch((error) => {
           alert("Request Accounts Failed");
@@ -60,30 +51,23 @@ const FrontPage = () => {
     setProvider(null);
     setChainId(null);
 
-    setSigner(null);
     setWalletAddress(null);
-    userBalance(null);
+    setUserBalance(null);
   }
 
   async function contractView() {
-    const contract = new ethers.Contract(
-      StupidContract.Address,
-      StupidContract.ABI,
-      provider
-    );
-
-    const result = await contract.stupidRegistry(
-      viewIndexInputRef.current.value
-    );
+    const result = await Contract.connect(
+      provider.getSigner()
+    ).stupidRegistry(viewIndexInputRef.current.value);
 
     alert(result);
   }
 
   async function contractTx() {
     // send tx
-    let tx = await stupidContract
-      .connect(signer)
-      .AddToRegistry(txMsgInputRef.current.value, { value: 1000 });
+    let tx = await Contract.connect(
+      provider.getSigner()
+    ).AddToRegistry(txMsgInputRef.current.value, { value: 1000 });
 
     alert("tx sent with hash: " + tx.hash);
 
@@ -95,7 +79,7 @@ const FrontPage = () => {
     }
 
     // get logs from tx receipt
-    const logs = parseLogs(receipt.logs, StupidContract.ABI);
+    const logs = parseLogs(receipt.logs, ABI);
     logs.forEach((log) => {
       console.log(log);
     });
@@ -105,6 +89,12 @@ const FrontPage = () => {
     let abiInterface = new ethers.utils.Interface(abi);
     return logs.map((log) => abiInterface.parseLog(log));
   }
+
+  //TODO listen for events
+
+  //TODO get events
+
+  //TODO get historical txs
 
   return (
     <>

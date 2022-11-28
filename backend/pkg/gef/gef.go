@@ -138,3 +138,5 @@ func WaitTxReceipt(
 
 	return waitTxReceiptInternal(client, tx)
 }
+
+//TODO get historical txs

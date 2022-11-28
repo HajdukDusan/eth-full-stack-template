@@ -31,10 +31,9 @@ func SubscribeToEvent(client *ethclient.Client, stupidContractAPI *StupidContrac
 		},
 	)
 
-	go func() {
+	func() {
 		for {
 			log := <-ch
-			fmt.Println("From sub:", log)
 			switch obj := log.(type) {
 			case *StupidContract.StupidContractStupidEvent:
 				fmt.Println("StupidEvent")
