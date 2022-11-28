@@ -1,4 +1,12 @@
-import { Box, Button, Input, Text, Center, FormLabel } from "@chakra-ui/react";
+import {
+  Box,
+  Button,
+  Input,
+  Text,
+  Center,
+  FormLabel,
+  Flex,
+} from "@chakra-ui/react";
 import React, { useRef, useState, useEffect } from "react";
 
 import BigDecimal from "js-big-decimal";
@@ -11,81 +19,92 @@ const FrontPage = () => {
   const viewIndexInputRef = useRef();
   const txMsgInputRef = useRef();
 
-  const [errorMessage, setErrorMessage] = useState(null);
-
   const [provider, setProvider] = useState(null);
-
   const [networkChainId, setChainId] = useState(null);
-  const [defaultAccount, setDefaultAccount] = useState(null);
+
+  const [signer, setSigner] = useState(null);
+  const [walletAddress, setWalletAddress] = useState(null);
   const [userBalance, setUserBalance] = useState(null);
+
+  const stupidContract = new ethers.Contract(
+    StupidContract.Address,
+    StupidContract.ABI
+  );
 
   async function connect() {
     if (window.ethereum) {
       const provider = new ethers.providers.Web3Provider(window.ethereum);
+
       setProvider(provider);
       setChainId((await provider.getNetwork()).chainId);
-      provider.send("eth_requestAccounts", []).then(async () => {
-        await accountChangedHandler(provider.getSigner());
-      });
+
+      provider
+        .send("eth_requestAccounts", [])
+        .then(async () => {
+          const signer = provider.getSigner();
+
+          setWalletAddress(await signer.getAddress());
+          setUserBalance(ethers.utils.formatEther(await signer.getBalance()));
+          stupidContract.connect(signer);
+          setSigner(signer);
+        })
+        .catch((error) => {
+          alert("Request Accounts Failed");
+        });
     } else {
-      setErrorMessage("Please Install Metamask.");
+      alert("Please Install Metamask.");
     }
   }
 
   async function disconnect() {
-    setDefaultAccount(null);
-    setUserBalance(null);
     setProvider(null);
     setChainId(null);
+
+    setSigner(null);
+    setWalletAddress(null);
+    userBalance(null);
   }
 
-  async function callContractViewFunc() {
+  async function contractView() {
     const contract = new ethers.Contract(
       StupidContract.Address,
       StupidContract.ABI,
       provider
     );
 
-
-
-    const result = await contract.stupidRegistry(viewIndexInputRef.current.value);
+    const result = await contract.stupidRegistry(
+      viewIndexInputRef.current.value
+    );
 
     alert(result);
   }
 
   async function contractTx() {
-    const signer = await provider.getSigner(defaultAccount);
+    // send tx
+    let tx = await stupidContract
+      .connect(signer)
+      .AddToRegistry(txMsgInputRef.current.value, { value: 1000 });
 
-    const contractWithSigner = new ethers.Contract(
-      StupidContract.Address,
-      StupidContract.ABI,
-      signer
-    );
+    alert("tx sent with hash: " + tx.hash);
 
-    //const txOptions = {value: ethers.utils.parseEther("1.0")}
-    const txOptions = { value: 1000 };
-
-    let tx = await contractWithSigner.AddToRegistry(
-      txMsgInputRef.current.value,
-      txOptions
-    );
-    console.log(tx.hash);
-
+    // wait for tx to be mined
     const receipt = await tx.wait();
     if (receipt.status !== 1) {
       alert("Tx failed!");
       return;
     }
 
-    console.log(receipt);
+    // get logs from tx receipt
+    const logs = parseLogs(receipt.logs, StupidContract.ABI);
+    logs.forEach((log) => {
+      console.log(log);
+    });
   }
 
-  const accountChangedHandler = async (newAccount) => {
-    const address = await newAccount.getAddress();
-    setDefaultAccount(address);
-    const balance = await newAccount.getBalance();
-    setUserBalance(ethers.utils.formatEther(balance));
-  };
+  function parseLogs(logs, abi) {
+    let abiInterface = new ethers.utils.Interface(abi);
+    return logs.map((log) => abiInterface.parseLog(log));
+  }
 
   return (
     <>
@@ -99,23 +118,19 @@ const FrontPage = () => {
         <br></br>
 
         <Text fontSize="2xl">Chain ID: {networkChainId}</Text>
-        <Text fontSize="2xl">Connected With: {defaultAccount}</Text>
+        <Text fontSize="2xl">Connected With: {walletAddress}</Text>
         <Text fontSize="2xl">Wallet Amount: {userBalance} ETH</Text>
 
         <Box maxW="2xl" mx={"auto"} pt={10} px={{ base: 20, sm: 15, md: 20 }}>
-          <Button onClick={connect}>Connect Wallet</Button>
+          <Flex justifyContent="space-between">
+            <Button onClick={connect}>Connect Wallet</Button>
+            <Button onClick={disconnect}>Disconnect Wallet</Button>
+          </Flex>
 
           <br></br>
           <br></br>
 
-          <Button onClick={disconnect}>Disconnect Wallet</Button>
-
-          <br></br>
-          <br></br>
-
-          <Button onClick={callContractViewFunc}>
-            Contract Call View Function
-          </Button>
+          <Button onClick={contractView}>Contract Call View Function</Button>
           <FormLabel color="white">Index parameter</FormLabel>
           <Input ref={viewIndexInputRef} type="text" />
 
@@ -127,8 +142,6 @@ const FrontPage = () => {
           <Input ref={txMsgInputRef} type="text" />
         </Box>
       </Box>
-
-      {errorMessage}
     </>
   );
 };
