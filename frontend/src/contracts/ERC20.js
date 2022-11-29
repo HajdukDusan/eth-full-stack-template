@@ -1,5 +1,5 @@
-import { ethers } from "ethers"; 
-export const ABI= [
+import { ethers } from "ethers";
+const ABI = [
   {
     "anonymous": false,
     "inputs": [
@@ -51,5 +51,6 @@ export const ABI= [
     "type": "event"
   }
 ]
-export const address= "0xc3761EB917CD790B30dAD99f6Cc5b4Ff93C4F9eA"
-export const contract=new ethers.Contract(address, ABI)
+const Address = "0xc3761EB917CD790B30dAD99f6Cc5b4Ff93C4F9eA"
+const Contract = new ethers.Contract(Address, ABI)
+export { Contract, Address, ABI }

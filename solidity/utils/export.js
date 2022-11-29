@@ -14,6 +14,7 @@ const exportForFront = (contractName, address) => {
     runShellCmd(
         "cd .. &" +
         "cd ./frontend &" +
+        "cd ./src &" +
         "mkdir contracts"
     )
 

@@ -13,7 +13,11 @@ import BigDecimal from "js-big-decimal";
 
 import { ethers } from "ethers";
 
-import { Contract, Address, ABI } from "../contracts/StupidContract";
+import {
+  Contract as StupidContract,
+  Address as StupidContractAddress,
+  ABI as StupidContractABI,
+} from "../contracts/StupidContract";
 
 const FrontPage = () => {
   const viewIndexInputRef = useRef();
@@ -56,7 +60,7 @@ const FrontPage = () => {
   }
 
   async function contractView() {
-    const result = await Contract.connect(
+    const result = await StupidContract.connect(
       provider.getSigner()
     ).stupidRegistry(viewIndexInputRef.current.value);
 
@@ -65,13 +69,15 @@ const FrontPage = () => {
 
   async function contractTx() {
     // send tx
-    let tx = await Contract.connect(
-      provider.getSigner()
-    ).AddToRegistry(txMsgInputRef.current.value, { value: 1000 });
+    let tx = await StupidContract.connect(provider.getSigner()).AddToRegistry(
+      txMsgInputRef.current.value,
+      { value: 1000 }
+    );
 
     alert("tx sent with hash: " + tx.hash);
 
     // wait for tx to be mined
+    // if on localhost it cant be trusted :)
     const receipt = await tx.wait();
     if (receipt.status !== 1) {
       alert("Tx failed!");
@@ -79,7 +85,7 @@ const FrontPage = () => {
     }
 
     // get logs from tx receipt
-    const logs = parseLogs(receipt.logs, ABI);
+    const logs = parseLogs(receipt.logs, StupidContractABI);
     logs.forEach((log) => {
       console.log(log);
     });
@@ -90,9 +96,29 @@ const FrontPage = () => {
     return logs.map((log) => abiInterface.parseLog(log));
   }
 
-  //TODO listen for events
+  // up to 10k events
+  async function getLogs() {
+    let filter = StupidContract.filters.StupidEvent();
+    filter.fromBlock = 0;
+    filter.toBlock = "latest";
 
-  //TODO get events
+    const logs = await provider.getLogs(filter);
+
+    const parsedLogs = parseLogs(logs, StupidContractABI);
+
+    console.log(parsedLogs);
+  }
+
+  function listenForEvent() {
+
+    // dont run miltiple times without reseting the provider
+    StupidContract.connect(provider).on("StupidEvent", (index, sender, timestamp) => {
+      console.log(index);
+      console.log(sender);
+      console.log(timestamp);
+    });
+    // at first this returns the new-est event, dont know why
+  }
 
   //TODO get historical txs
 
@@ -130,6 +156,16 @@ const FrontPage = () => {
           <Button onClick={contractTx}>Create Contract Tx</Button>
           <FormLabel color="white">Message parameter</FormLabel>
           <Input ref={txMsgInputRef} type="text" />
+
+          <br></br>
+          <br></br>
+
+          <Button onClick={getLogs}>Fetch Logs</Button>
+
+          <br></br>
+          <br></br>
+
+          <Button onClick={listenForEvent}>Listen For Event</Button>
         </Box>
       </Box>
     </>
