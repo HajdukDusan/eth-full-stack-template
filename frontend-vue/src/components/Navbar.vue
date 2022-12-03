@@ -1,6 +1,5 @@
 <template>
     <div>
-
         <nav class="navbar navbar-expand-sm navbar-dark bg-primary">
             <a class="navbar-brand" href="#">Navbar</a>
             <button class="navbar-toggler d-lg-none" type="button" data-toggle="collapse" data-target="#collapsibleNavId" aria-controls="collapsibleNavId"
@@ -21,24 +20,35 @@
                         </div>
                     </li>
                 </ul>
-                <button class="btn btn-success my-2 my-sm-0" type="submit">Connect wallet</button>
+                <form class="form-inline my-2 my-lg-0">
+                    <input class="form-control mr-sm-2" type="text" placeholder="Search">
+                    <button class="btn btn-success my-2 my-sm-0" type="submit">Connect wallet</button>
+                </form>
             </div>
         </nav>
     </div>
 </template>
 
-
 <script>
 export default {
-    name: "Navbar",
+    name: 'Navbar',
 
     data() {
         return {
-        }
-    }
+            
+        };
+    },
 
-}
+    mounted() {
+        
+    },
+
+    methods: {
+        
+    },
+};
 </script>
 
-<style>
+<style lang="scss" scoped>
+
 </style>

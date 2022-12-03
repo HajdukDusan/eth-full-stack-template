@@ -11,10 +11,9 @@
     "bootstrap": "^4.6.2",
     "bootstrap-vue": "^2.23.1",
     "core-js": "^3.6.5",
-    "jquery": "^3.6.1",
     "popper.js": "^1.16.1",
-    "portal-vue": "^2.1.7",
-    "vue": "^2.6.11"
+    "vue": "^2.6.11",
+    "vue-router": "^3.6.5"
   },
   "devDependencies": {
     "@vue/cli-plugin-babel": "~4.5.15",
