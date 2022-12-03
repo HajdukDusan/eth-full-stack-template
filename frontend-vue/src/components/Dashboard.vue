@@ -1,5 +1,5 @@
 <template>
-    <div class="container-fluid px-5 pt-5">
+    <div class="container-fluid">
         <h2>Content</h2>
     </div>
 </template>

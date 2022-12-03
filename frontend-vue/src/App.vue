@@ -6,7 +6,7 @@
         <div class="col-2 px-0 bg-light">
           <Sidebar/>
         </div>
-        <div class="col-10">
+        <div class="col-10 px-3 pt-3">
           <router-view></router-view>
         </div>
     </div>

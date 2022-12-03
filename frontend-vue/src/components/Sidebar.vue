@@ -4,7 +4,9 @@
         <hr>
         <ul class="nav nav-pills flex-column mb-auto px-3">
             <li v-for="item in items" :key="item.name" class="nav-item">
-                <span @click="active = item.name" class="nav-link" :class="{ active: active == item.name }">{{ item.name }}</span>
+                <span @click="active = item.name" class="nav-link" :class="{ active: active == item.name }">
+                    <i :class="item.icon" class="mx-3"></i>{{ item.name }}
+                    </span>
             </li>
         </ul>
     </div>
@@ -20,11 +22,13 @@ export default {
             items: [
                 {
                     name: "Dashboard",
-                    to: '/'
+                    to: '/',
+                    icon: 'fa fa-home'
                 },
                 {
                     name: "Wallet",
-                    to: '/wallet'
+                    to: '/wallet',
+                    icon: 'fa fa-wallet'
                 }
             ]
             

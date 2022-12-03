@@ -22,7 +22,7 @@
                 </ul>
                 <form class="form-inline my-2 my-lg-0">
                     <input class="form-control mr-sm-2" type="text" placeholder="Search">
-                    <button class="btn btn-success my-2 my-sm-0" type="submit">Connect wallet</button>
+                    <button @click="connectWallet" class="btn btn-success my-2 my-sm-0" type="submit">Connect wallet</button>
                 </form>
             </div>
         </nav>
@@ -30,12 +30,16 @@
 </template>
 
 <script>
+
+import { ethers } from 'ethers';
+import { store } from '../store.js';
+
 export default {
     name: 'Navbar',
 
     data() {
         return {
-            
+            store,
         };
     },
 
@@ -44,7 +48,17 @@ export default {
     },
 
     methods: {
-        
+        connectWallet() {
+            const eth = window.ethereum;
+            if(eth) {
+                store.provider = new ethers.providers.Web3Provider(eth);
+
+                // Request permission
+                store.provider.send('eth_requestAccounts', []).then(() => {
+                    store.signer = store.provider.getSigner();
+                });
+            }
+        }
     },
 };
 </script>
