@@ -51,4 +51,9 @@ export default {
     text-align: center;
 }
 
+span {
+    transition: background-color 0.5s;
+    cursor: pointer;
+}
+
 </style>
