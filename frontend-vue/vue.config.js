@@ -1,3 +1,5 @@
 module.exports = {
-    disableHostCheck: true
+    devServer: {
+        disableHostCheck: true
+    }
 }
