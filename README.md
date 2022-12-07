@@ -2,7 +2,6 @@
 
   <img src="https://github.com/get-icon/geticon/raw/master/icons/ethereum.svg" alt="logo" width="120px" height="120px" height="auto" />
   <br/>
-  <br/>
   <h1>Ethereum Full Stack Project Template</h1>
 
   <h3>
