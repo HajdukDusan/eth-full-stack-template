@@ -47,7 +47,7 @@ Using a local blockchain instance is the best way to start developing web3 apps.
 
 First we need to run the local blockchain by spinning up a local node. To spin up a local node run the following command in the console:
 
-```bash
+```cmd
   ...\eth-full-stack-template\solidity> npx hardhat node
 ```
 
@@ -68,7 +68,7 @@ The `deployContract` function returns the address of the deployed contract.
 
 Run the js script:
 
-```bash
+```cmd
   ...\eth-full-stack-template\solidity> npx hardhat run --network localhost .\scripts\deploy_localhost.js
 ```
 
@@ -87,7 +87,7 @@ async function main() {
 
 You can deploy contracts to a live blockchain like `Mainnet` or the `Goerli` testnet with the following command
 
-```bash
+```cmd
   ...\eth-full-stack-template\solidity> npx hardhat run --network goerli .\scripts\deploy_export_testnet.js
 ```
 
