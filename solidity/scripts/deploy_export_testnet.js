@@ -9,7 +9,7 @@ async function main() {
     const address = await deployAndExport("StupidContract", 1000, "This is the stupid contract description");
 
     // verify contract on etherscan
-    await verify(address, [1000, "This is the stupid contract description"])
+    //await verify(address, [1000, "This is the stupid contract description"])
 }
 
 main()
