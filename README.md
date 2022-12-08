@@ -48,7 +48,7 @@ Using a local blockchain instance is the best way to start developing web3 apps.
 
 First we need to run the local blockchain by spinning up a local node. To spin up a local node run the following command in the console:
 
-```cmd
+```bash
   ...\eth-full-stack-template\solidity> npx hardhat node
 ```
 
@@ -69,7 +69,7 @@ The `deployContract` function returns the address of the deployed contract.
 
 Run the js script:
 
-```cmd
+```bash
   ...\eth-full-stack-template\solidity> npx hardhat run --network localhost .\scripts\deploy_localhost.js
 ```
 
@@ -88,7 +88,7 @@ async function main() {
 
 You can deploy contracts to a live blockchain like `Mainnet` or the `Goerli` testnet with the following command
 
-```cmd
+```bash
   ...\eth-full-stack-template\solidity> npx hardhat run --network goerli .\scripts\deploy_export_testnet.js
 ```
 
@@ -114,6 +114,31 @@ In order for the backend and fronted to work you need to export the contract you
 
 The exported contract creates a `contracts` folder in the backend directory with the generated golang package that contains an `API` and an `address` of the deployed contract.
 
+In order to run the backend project you need to specify the network as an argument.
+```bash
+  ...\eth-full-stack-template\backend> go run .\cmd\main.go LOCALHOST
+```
+
+The network can be either LOCALHOST, TESTNET or MAINNET.
+
+The backend project contains these examples of the `gef` package usage:
+- Create a normal transaction
+- Create a contract transaction (calling a contract function) 
+- Call a contract view function
+- Fetch contract logs (supports unlimited number of logs)
+- Subscribe to contract events (only if your `.env` file contains web socket urls)
+
+Most RPC nodes will return a maximum of 10,000 logs at a time, so the fetch function of the `gef` package will call the RPC node multiple times in order to fetch all logs.
+
 ## Frontend
 
 The exported contract creates a js script in the `src/contracts` folder that contains an instance of a contract class from the `Ethers.js` library along with the contracts `ABI` and `address`. 
+
+All blockchain interactions go through the provider of the browser extension wallet.
+
+The frontend project contains these examples:
+- Connect and disconnect a browser extension wallet
+- Create a contract transaction (calling a contract function) 
+- Call a contract view function
+- Fetch contracts logs (up to 10k logs)
+- Listen for incoming events
