@@ -13,6 +13,7 @@
 <a href="https://ethereum.org/" title="Ethereum"><img src="https://github.com/get-icon/geticon/raw/master/icons/ethereum.svg" alt="Ethereum" width="32px" height="32px"></a>
 <a href="https://docs.soliditylang.org/en/v0.8.17/" title="Solidity"><img src="https://cdn.worldvectorlogo.com/logos/solidity.svg" alt="Solidity" width="32px" height="32px"></a>
 <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript" title="JS"><img src="https://github.com/get-icon/geticon/raw/master/icons/javascript.svg" alt="JS" width="32px" height="32px"></a>
+<a href="https://hardhat.org/" title="HardHat"><img src="https://seeklogo.com/images/H/hardhat-logo-888739EBB4-seeklogo.com.png" alt="HardHat" width="32px" height="32px"></a>
 <a href="https://go.dev/" title="Golang"><img src="https://github.com/get-icon/geticon/raw/master/icons/go.svg" alt="Golang" width="32px" height="32px"></a>
 <a href="https://reactjs.org/" title="React"><img src="https://github.com/get-icon/geticon/raw/master/icons/react.svg" alt="React" width="32px" height="32px"></a>
 <a href="https://vuejs.org/" title="Vue.js"><img src="https://github.com/get-icon/geticon/raw/master/icons/vue.svg" alt="Vue.js" width="32px" height="32px"></a>
